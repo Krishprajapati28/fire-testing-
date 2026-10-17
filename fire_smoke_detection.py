@@ -152,11 +152,13 @@ def postprocess(raw_outputs, orig_shape,
 
     boxes = _dfl_to_boxes(pred[mask, :64], anchors[mask], stride_tensors[mask])
 
-    # Scale to original image
+    # Undo letterbox (same scale/padding as preprocess) to get original-image coords
     oh, ow  = orig_shape
-    sx, sy  = ow / INPUT_SIZE, oh / INPUT_SIZE
-    boxes[:, [0, 2]] = (boxes[:, [0, 2]] * sx).clip(0, ow)
-    boxes[:, [1, 3]] = (boxes[:, [1, 3]] * sy).clip(0, oh)
+    scale   = min(INPUT_SIZE / oh, INPUT_SIZE / ow)
+    top     = (INPUT_SIZE - int(oh * scale)) // 2
+    left    = (INPUT_SIZE - int(ow * scale)) // 2
+    boxes[:, [0, 2]] = ((boxes[:, [0, 2]] - left) / scale).clip(0, ow)
+    boxes[:, [1, 3]] = ((boxes[:, [1, 3]] - top) / scale).clip(0, oh)
 
     confs_f = confs[mask]
     class_f = class_ids[mask]
